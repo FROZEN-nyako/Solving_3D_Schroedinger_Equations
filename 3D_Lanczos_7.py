@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
+from parity import P
 
 # parameters
 
@@ -173,9 +174,21 @@ plt.colorbar(sc, ax=ax, label='Function Value')
 
 plt.show()
 
+# calculate the approximate groundstate energy
+
 approxenergy = np.dot(approxgroundstate, H.dot(approxgroundstate)).real
 print('The approximate groundstate energy is {:.4f} MeV.'.format(approxenergy))
 
 # the ground state energy for the HO potential is expected to be 21.8914 MeV
 # the ground state energy for the Coulomb potential is expected to be -0.0125 MeV (not so accurate here)
 # the ground state energy for the well potential is expected to be -2.2245 MeV
+
+# calculate the parity
+
+vp = approxgroundstate - P(approxgroundstate, n)
+vm = approxgroundstate + P(approxgroundstate, n)
+
+if np.sum(vp * vp) < 10 ** -4:
+    print('It has positive parity.')
+if np.sum(vm * vm) < 10 ** -4:
+    print('It has negative parity.')
