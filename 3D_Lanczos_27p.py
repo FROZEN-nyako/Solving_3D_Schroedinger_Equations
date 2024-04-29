@@ -10,7 +10,7 @@ a = 0.001   # MeV ** (-1), lattice spacing
 n = int(L / a)   # number of lattice per dimension
 cen = (1 + n) / 2   # centre of the lattice
 m = 100   # dimension of Heff
-M = 939 / 2   # MeV, reduced mass of two-nucleon system
+M = 938.92 / 2   # MeV, reduced mass of two-nucleon system
 
 # kinetic matrix
 
@@ -35,19 +35,19 @@ elements = [diagonalsT,
             Tc, Tc, Tc, Tc]
 
 positions = [0,
-             -1, 1, -(n ** 3 - 1), (n ** 3 - 1),
-             -n, n, -(n ** 3 - n), (n ** 3 - n),
-             -n ** 2, n ** 2, -(n ** 3 - n ** 2), (n ** 3 - n ** 2),
-             -(n ** 2 - n), (n ** 2 - n), -(n ** 3 - n ** 2 + n), (n ** 3 - n ** 2 + n),
-             -(n ** 2 + n), (n ** 2 + n), -(n ** 3 - n ** 2 - n), (n ** 3 - n ** 2 - n),
-             -(n ** 2 - 1), (n ** 2 - 1), -(n ** 3 - n ** 2 + 1), (n ** 3 - n ** 2 + 1),
-             -(n ** 2 + 1), (n ** 2 + 1), -(n ** 3 - n ** 2 - 1), (n ** 3 - n ** 2 - 1),
-             -(n - 1), (n - 1), -(n ** 3 - n + 1), (n ** 3 - n + 1),
-             -(n + 1), (n + 1), -(n ** 3 - n - 1), (n ** 3 - n - 1),
-             -(n ** 2 - n - 1), (n ** 2 - n - 1), -(n ** 3 - n ** 2 + n + 1), (n ** 3 - n ** 2 + n + 1),
-             -(n ** 2 - n + 1), (n ** 2 - n + 1), -(n ** 3 - n ** 2 + n - 1), (n ** 3 - n ** 2 + n - 1),
-             -(n ** 2 + n - 1), (n ** 2 + n - 1), -(n ** 3 - n ** 2 - n + 1), (n ** 3 - n ** 2 - n + 1),
-             -(n ** 2 + n + 1), (n ** 2 + n + 1), -(n ** 3 - n ** 2 - n - 1), (n ** 3 - n ** 2 - n - 1)]
+             -n ** 2, (n ** 3 - n ** 2), n ** 2, -(n ** 3 - n ** 2),
+             -n, (n ** 3 - n), n, -(n ** 3 - n),
+             -1, (n ** 3 - 1), 1, -(n ** 3 - 1),
+             -(n ** 2 + n), (n ** 3 - n ** 2 - n), (n ** 2 + n), -(n ** 3 - n ** 2 - n),
+             -(n + 1), (n ** 3 - n - 1), (n + 1), -(n ** 3 - n - 1),
+             -(n ** 2 + 1), (n ** 3 - n ** 2 - 1), (n ** 2 + 1), -(n ** 3 - n ** 2 - 1),
+             -(n ** 2 - n), (n ** 3 - n ** 2 + n), (n ** 2 - n), -(n ** 3 - n ** 2 + n),
+             -(n - 1), (n ** 3 - n + 1), (n - 1), -(n ** 3 - n + 1),
+             -(n ** 2 - 1), (n ** 3 - n ** 2 + 1), (n ** 2 - 1), -(n ** 3 - n ** 2 + 1),
+             -(n ** 2 + n + 1), (n ** 3 - n ** 2 - n - 1), (n ** 2 + n + 1), -(n ** 3 - n ** 2 - n - 1),
+             -(n ** 2 - n - 1), (n ** 3 - n ** 2 + n + 1), (n ** 2 - n - 1), -(n ** 3 - n ** 2 + n + 1),
+             -(n ** 2 - n + 1), (n ** 3 - n ** 2 + n - 1), (n ** 2 - n + 1), -(n ** 3 - n ** 2 + n - 1),
+             -(n ** 2 + n - 1), (n ** 3 - n ** 2 - n + 1), (n ** 2 + n - 1), -(n ** 3 - n ** 2 - n + 1)]
 
 T = sp.sparse.diags(elements, positions, shape=(n ** 3, n ** 3), format='dia')
 
@@ -104,7 +104,7 @@ def OverlapRemoval(myv, ves):
     return newv
 
 
-def LanczosAlgorithm(mat, d):
+def LanczosAlgorithm(mat, m):
     lth = mat.shape[0]
     v1 = np.random.rand(lth)
     v1 /= np.sqrt(np.sum(v1 * v1))
@@ -116,7 +116,8 @@ def LanczosAlgorithm(mat, d):
     v2 /= beta
     q = [v1, v2]
     r = [alpha, beta]
-    for k in range(2, d + 1):
+
+    for k in range(2, m + 1):
         cv = q[k - 1]
         tv = mat.dot(cv)
         alpha = np.einsum('i,i', cv, tv)
@@ -132,38 +133,55 @@ def LanczosAlgorithm(mat, d):
 
     eigs = [r[i] for i in range(len(r) - 1)]
     vecs = np.transpose(q)
-    return eigs, vecs
+    diagonals = [eigs[2 * i - 2] for i in range(1, m + 1)]
+    off_diagonals = [eigs[2 * i - 1] for i in range(1, m)]
+    data = [diagonals, off_diagonals, off_diagonals]
+    offsets = [0, -1, 1]
+    Heff = sp.sparse.diags(data, offsets, shape=(m, m), format='dia')
 
+    return Heff, vecs
 
-abs, vs = LanczosAlgorithm(H, m)   # shape(vs) = (n ** 3) * (m + 1)
-
-diagonals = [abs[2*i-2] for i in range(1, m+1)]
-off_diagonals = [abs[2*i-1] for i in range(1, m)]
-
-data = [diagonals, off_diagonals, off_diagonals]
-offsets = [0, -1, 1]
-Heff = sp.sparse.diags(data, offsets, shape=(m, m), format='dia')
+Heff, vs = LanczosAlgorithm(H, m)   # shape(vs) = (n ** 3) * (m + 1)
 
 num_eigenvalues = 1   # TODO: set other numbers to check excited states
 eigenvalues, eigenvectors = sp.sparse.linalg.eigs(Heff, k=num_eigenvalues, which='SR')
 
-min_eigenvalue = np.min(eigenvalues)
+min_eigenvalue = np.max(eigenvalues)
 min_eigenvector = eigenvectors[:, np.argmax(eigenvalues)]
 min_eigenvector = min_eigenvector.tolist()
 min_eigenvector.append(0)   # length = m + 1
+
+approxgroundstate = np.einsum('...i,i', vs, min_eigenvector)
+approxgroundstate /= np.sqrt(np.sum(approxgroundstate * approxgroundstate))
+
+# calculate the approximate groundstate energy
+
+approxenergy = np.dot(approxgroundstate, H.dot(approxgroundstate)).real
+print('The approximate groundstate energy is {:.4f} MeV.'.format(approxenergy))
+
+# the ground state energy for the HO potential is expected to be 21.8914 MeV
+# the ground state energy for the Coulomb potential is expected to be -0.0125 MeV (not so accurate here)
+# the ground state energy for the well potential is expected to be -2.2245 MeV
+
+# calculate the parity
+
+vp = approxgroundstate - P(approxgroundstate, n)
+vm = approxgroundstate + P(approxgroundstate, n)
+
+if np.sum(vp * vp) < 10 ** -4:
+    print('It has positive parity:', np.sum(vp * vp).real)
+if np.sum(vm * vm) < 10 ** -4:
+    print('It has negative parity:', np.sum(vm * vm).real)
 
 # 2D slice plot
 
 z0 = 50   # TODO: set position of the 2D slice to plot
 
-approxgroundstate = np.einsum('...i,i', vs, min_eigenvector)
-approxgroundstate /= np.sqrt(np.sum(approxgroundstate * approxgroundstate))
-
 x = np.arange(n)
 y = np.arange(n)
 x, y = np.meshgrid(x, y)
 
-wavefunction = approxgroundstate.flatten()[n ** 2 * x + n * y + z0 - 1].real
+wavefunction = approxgroundstate.flatten()[n ** 2 * x + n * y + z0].real
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
@@ -186,7 +204,7 @@ sizes = approxgroundstate.flatten()[n ** 2 * x + n * y + z].real
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-sc = ax.scatter(x, y, z, c=sizes, s=10, alpha=0.1)
+sc = ax.scatter(x, y, z, c=sizes, s=10, alpha=0.01)
 
 ax.set_xlabel('x')
 ax.set_ylabel('y')
@@ -195,22 +213,3 @@ ax.set_zlabel('z')
 plt.colorbar(sc, ax=ax, label='Function Value')
 
 plt.show()
-
-# calculate the approximate groundstate energy
-
-approxenergy = np.dot(approxgroundstate, H.dot(approxgroundstate)).real
-print('The approximate groundstate energy is {:.4f} MeV.'.format(approxenergy))
-
-# the ground state energy for the HO potential is expected to be 21.8914 MeV
-# the ground state energy for the Coulomb potential is expected to be -0.0125 MeV (not so accurate here)
-# the ground state energy for the well potential is expected to be -2.2245 MeV
-
-# calculate the parity
-
-vp = approxgroundstate - P(approxgroundstate, n)
-vm = approxgroundstate + P(approxgroundstate, n)
-
-if np.sum(vp * vp) < 10 ** -5:
-    print('It has positive parity.')
-if np.sum(vm * vm) < 10 ** -5:
-    print('It has negative parity.')
