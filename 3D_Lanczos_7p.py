@@ -8,7 +8,7 @@ from parity import P
 L = 0.1   # MeV ** (-1), lattice length
 a = 0.001   # MeV ** (-1), lattice spacing
 n = int(L / a)   # number of lattice per dimension
-cen = (1 + n) / 2   # centre of the lattice
+cen = (1 + n) / 2 - 1   # centre of the lattice
 m = 100   # dimension of Heff
 M = 938.92 / 2   # MeV, reduced mass of two-nucleon system
 
@@ -31,7 +31,7 @@ T = sp.sparse.diags(elements, positions, shape=(n ** 3, n ** 3), format='dia')
 
 
 def r(i):
-    return a * (i+1 - cen)
+    return a * (i - cen)
 
 
 # HO potential matrix
@@ -137,7 +137,7 @@ approxgroundstate /= np.sqrt(np.sum(approxgroundstate * approxgroundstate))
 approxenergy = np.dot(approxgroundstate, H.dot(approxgroundstate)).real
 print('The approximate groundstate energy is {:.4f} MeV.'.format(approxenergy))
 
-# the ground state energy for the HO potential is expected to be 21.8914 MeV
+# the ground state energy for the HO potential is expected to be 21.8923 MeV
 # the ground state energy for the Coulomb potential is expected to be -0.0125 MeV (not so accurate here)
 # the ground state energy for the well potential is expected to be -2.2245 MeV
 
